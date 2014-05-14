@@ -1,7 +1,7 @@
 function Y = interp4(X, T)
 % Y = interp4(X, T)
 %   4-point (cubic) interpolation.  X is a sequence; T is a (vector
-%   of) real-valued indices on a zero-basis.  Y returns the values
+%   of) real-valued indices on a one-basis.  Y returns the values
 %   of X interpolated at each T value.
 %   This is based on the lagrange polynomial described on p. 46 of 
 %   The Theory and Technique of Electronic Music by Miller Puckette.
