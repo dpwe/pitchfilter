@@ -38,7 +38,7 @@ VAD = yet_another_vad(XMag, SR/nhop);
 
 % Noise spectrum estimate - simple (dB) average over all non-VAD frames
 % (log domain to match auroralib.c)
-Noise = idB(mean(dB(XMag(:, find(VAD))),2));
+Noise = exp(mean(log(XMag(:, find(VAD))),2));
 
 % Duplicate for all time to give noise estimate W_hat
 W_hat = repmat(Noise, 1, size(XMag, 2));
@@ -63,26 +63,33 @@ Hinst2 = max(beta, (X2 - repmat(gamma_k, size(X2, 1), 1) .* W_hat2)./X2);
 %Hinst2 = Hinst2 .^ 2;
 % Sounds better without it - dips too severe if present
 
-% Smooth in time
-% noisecomp.c:164
-t_alpha = 0.4;  % looks like it should be 0.1 in code, but 0.2
-                % sounds better
+% Smooth in time (noisecomp.c:164)
+% Original values (time_delay needs to be longer for smaller alpha)
+%t_alpha = 0.1;
+%time_delay = 2;
+% These values sound better to me (for BABEL_OP1_204_MIC)
+t_alpha = 0.4;
+time_delay = 1;
+% Simple 1-pole filter on each row
 H_smoo = filter_by_row(t_alpha, [1 -(1-t_alpha)], Hinst2);
 
 % Smooth in frequency
 fwinlen = 21;  % 21 in original
+% Original is boxcar (noisecomp.c:238 et seq.)
 %f_kern = ones(fwinlen, 1)/fwinlen;
+% Tapered window is effectively narrower, sounds better
 f_kern = hann(fwinlen)/sum(hann(fwinlen));
 H2 = conv2(f_kern, [1], H_smoo, 'same');
 
 % Time-advance mask (e.g. noisecomp.c:94)
-time_delay = 2; 
 H2 = [H2(:, (time_delay+1):end), repmat(H2(:, end), 1, time_delay)];
 
 % Actual filtering
+% worst-case minimum (noiscomp.c:288, nr.c:255)
 alpha = 0.001;
 Shat = sqrt(max(alpha*W_hat2, X2.*H2));
 
+% Back out of STFT domain
 Y = istft(XS.*Shat./XMag, nfft, 0, nhop);
 
 % Y is my final answer
@@ -114,7 +121,6 @@ if do_plot
   caxis(ax);
   title('Shat');
 
-  
   linkaxes
 
 end
