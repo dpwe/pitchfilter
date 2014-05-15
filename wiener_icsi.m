@@ -5,6 +5,19 @@ function Y = wiener_icsi(X, SR)
 %      This version is as close as possible to ICSI's
 % 2014-05-15 Dan Ellis dpwe@ee.columbia.edu
 
+% Just cut out the low freq for rumble
+f_lp = 400;
+radius = 2 * pi * f_lp/SR;
+% Zero to remove DC and scale to compensate for pole gain
+b_hpf = (1 - radius/2) * [1 -1];
+% Pole to restore low frequencies above f_lp
+a_hpf = [1 -(1-radius)];
+% filter
+X = filter(b_hpf, a_hpf, X);
+
+%freqz(b_hpf, a_hpf);
+%return
+
 % STFT
 targetwinsec = 0.025;
 nfft = 2^round(log(targetwinsec*SR)/log(2));
@@ -52,13 +65,14 @@ Hinst2 = max(beta, (X2 - repmat(gamma_k, size(X2, 1), 1) .* W_hat2)./X2);
 
 % Smooth in time
 % noisecomp.c:164
-t_alpha = 0.2;  % looks like it should be 0.1 in code, but 0.2
+t_alpha = 0.4;  % looks like it should be 0.1 in code, but 0.2
                 % sounds better
 H_smoo = filter_by_row(t_alpha, [1 -(1-t_alpha)], Hinst2);
 
 % Smooth in frequency
-fwinlen = 21;
-f_kern = ones(fwinlen, 1)/fwinlen;
+fwinlen = 21;  % 21 in original
+%f_kern = ones(fwinlen, 1)/fwinlen;
+f_kern = hann(fwinlen)/sum(hann(fwinlen));
 H2 = conv2(f_kern, [1], H_smoo, 'same');
 
 % Time-advance mask (e.g. noisecomp.c:94)

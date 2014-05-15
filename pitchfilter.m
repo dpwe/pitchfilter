@@ -35,9 +35,11 @@ dm = resample_map(d', sr, vmap);
 % Enhance components at the target pitch period
 %dmf = enhance_period(dm, round(sr/target_pitch));
 
-win_t = 15; % median filter time window, in ? 8 ms steps
-win_f = 7;  % local average window in frequency (center pt not used)
-dmf = sgram_enhance(dm, win_t, win_f);
+%win_t = 15; % median filter time window, in ? 8 ms steps
+%win_f = 7;  % local average window in frequency (center pt not used)
+%dmf = sgram_enhance(dm, win_t, win_f);
+
+dmf = wiener_icsi(dm, sr);
 
 % Resample back to original domain
 du = resample_map(dmf, sr, inv_map(vmap));
