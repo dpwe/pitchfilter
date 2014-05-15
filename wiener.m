@@ -14,9 +14,7 @@ nfft = 2^round(log(targetwinsec*SR)/log(2));
 nhop = nfft/4;
 fftframesec = nhop/SR;
 
-% Initial spectrum
 XS = stft(X, nfft, nfft, nhop);
-
 % Magnitude
 XMag = abs(XS);
 
@@ -31,41 +29,32 @@ VAD = yet_another_vad(XMel, SR/nhop);
 % "Modified Wiener filter" per icslp02-aurora.pdf 
 % "Qualcomm-ICSI-OGI features for ASR", Adami et al, Interspeech 2002.
 
-% Noise spectrum estimate
+% Noise spectrum estimate - simple (dB) average over all non-VAD frames
+% (log domain to match auroralib.c)
+Noise = idB(mean(dB(XMel(:, find(VAD))),2));
 
-% Guess noise from first <initialestwin> frames
-%initialestwin = 100;
-%noiseframes = 1:initialestwin;
-%
-% No, estimate from all non-VAD frames
-noiseframes = find(VAD);
-
-% Estimate average noise over all noiseframes
-% In log domain, in keeping with auroralib.c
-Noise = idB(mean(dB(XMel(:, noiseframes)),2));
-
-% Duplicate for all time to give noise estimate What
-What = repmat(Noise, 1, size(XMel,2));
+% Duplicate for all time to give noise estimate W_hat
+W_hat = repmat(Noise, 1, size(XMel,2));
 
 % Online estimate of noise floor
 %pole_r = 0.98;
-%What = filter_by_row((1 - pole_r), [1 -pole_r], XMel, pole_r*Noise);
+%W_hat = filter_by_row((1 - pole_r), [1 -pole_r], XMel, pole_r*Noise);
 
 X2 = XMel.^2;
-What2 = What.^2;
+W_hat2 = W_hat.^2;
 
 % Wiener filter
 
+%SNRapost = 10*log10(max(1e-2, (sum(X2) - sum(W_hat2))./sum(W_hat2)));
 % SNRapost is actually (signal+noise)/(noise estimate) (noiscomp.c:138)
-%SNRapost = 10*log10(max(1e-2, (sum(X2) - sum(What2))./sum(What2)));
-SNRapost = 10*log10(max(1e-2, (sum(X2))./sum(What2)));
+SNRapost = 10*log10(max(1e-2, (sum(X2))./sum(W_hat2)));
 
-% eqn (2) from paper
+% Mapping SNR to overmasking factor (eqn (2) from paper)
 gamma_k = max(1.25, min(3.125, -1.875/20*SNRapost + 3.125));
 
-% eqn (1) from paper
+% Estimating masking filter as overmasked SNR (eqn (1) from paper)
 beta = 0.01;
-Hinst2 = max(beta, (X2 - repmat(gamma_k, nmel, 1) .* What2)./X2);
+Hinst2 = max(beta, (X2 - repmat(gamma_k, nmel, 1) .* W_hat2)./X2);
 
 % Smooth in time and frequency
 twinlen = 21;
@@ -84,7 +73,7 @@ H2 = conv2(f_kern, t_kern, Hinst2, 'same');
 
 alpha = 0.001;
 
-Shat = sqrt(max(alpha*What2, X2 .* H2));
+Shat = sqrt(max(alpha*W_hat2, X2 .* H2));
 
 % Back into FFT domain
 
@@ -97,38 +86,44 @@ Y = istft(XS.*XMask, nfft, nfft, nhop);
 % deemphasize
 Y = filter(1, emphfilt, Y);
 
+% Y is my final answer
 
-% plot
-%specgram(X, nfft, SR);
-ax = [-30 30];
+% Plotting all at end to preserve flow
+do_plot = 0;
+if do_plot
+  % plot
+  %specgram(X, nfft, SR);
+  ax = [-30 30];
 
-subplot(411)
-imgsc(dB(XMel));
-caxis(ax);
-title('X')
+  subplot(411)
+  imgsc(dB(XMel));
+  caxis(ax);
+  title('X')
 
-subplot(412)
-imgsc(dB(What));
-caxis(ax);
-title('What')
+  subplot(412)
+  imgsc(dB(W_hat));
+  caxis(ax);
+  title('W\_hat')
 
-subplot(413)
-%plot(SNRapost);
-%title('SNRapost');
-imgsc(dB(Hinst2)/2)
-caxis(ax);
-title('Hinst');
+  subplot(413)
+  %plot(SNRapost);
+  %title('SNRapost');
+  imgsc(dB(Hinst2)/2)
+  caxis(ax);
+  title('Hinst');
 
-subplot(414)
-%imgsc(dB(Shat));
-%caxis(ax);
-%title('Shat');
-imgsc(dB(H2)/2)
-caxis(ax);
-title('H');
+  subplot(414)
+  %imgsc(dB(Shat));
+  %caxis(ax);
+  %title('Shat');
+  imgsc(dB(H2)/2)
+  caxis(ax);
+  title('H');
 
-linkaxes
+  linkaxes
 
+end
+  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Y = filter_by_row(B, A, X, Z)
 % Apply a single filter to every row of X; use initial state
