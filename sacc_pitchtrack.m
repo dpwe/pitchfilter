@@ -5,7 +5,7 @@ function [pitch, pvx, times] = sacc_pitchtrack(d,sr)
 %    times is sample times.
 % 2014-05-14 Dan Ellis dpwe@ee.columbia.edu
 
-doplot = 1;
+doplot = 0;
 
 % Add SAcC functions to path
 SAcCdir = '/u/drspeech/data/RATS/code/SAcC';
