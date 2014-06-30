@@ -51,11 +51,11 @@ if h == 0
 end
 
 xlen = ftsize + (cols-1)*h;
-x = zeros(1,xlen);
+x = zeros(xlen, 1);
 
 for b = 0:h:(h*(cols-1))
   ft = d(:,1+b/h)';
   ft = [ft, conj(ft([((ftsize/2)):-1:2]))];
   px = real(ifft(ft));
-  x((b+1):(b+ftsize)) = x((b+1):(b+ftsize))+px.*win;
+  x((b+1):(b+ftsize)) = x((b+1):(b+ftsize)) + (px.*win)';
 end;
