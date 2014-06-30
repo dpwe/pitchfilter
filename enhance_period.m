@@ -1,6 +1,7 @@
-function y = enhance_period(x, pd)
-% y = enhance_period(x, pd)
+function [y, f_b, f_a] = enhance_period(x, pd)
+% [y, b, a]= enhance_period(x, pd)
 %   Filter x to enhance component with period pd.
+%   [b, a] return the actual filter applied.
 % 2014-05-14 Dan Ellis dpwe@ee.columbia.edu
 
 % Apply 100 Hz enhancement
@@ -21,8 +22,10 @@ if 0
 
 else
   % Combify an FIR LPF
-  fir_ord = 16;
-  cutoff = 0.2;
+  %fir_ord = 16;
+  %cutoff = 0.2;
+  fir_ord = 6;
+  cutoff = 0.4;
   b = fir1(fir_ord, cutoff);
   % Comb-ize
   f_b = zeros(1, 1 + length(b)*f_ord);
@@ -33,6 +36,8 @@ else
   y = conv(f_b, x);
   % Remove linear phase delay
   y = y(((length(b)-1)/2*f_ord)+[1:length(x)]);
+  % for the output...
+  f_a = 1;
 end
 
 % Plot enhancement filter?
