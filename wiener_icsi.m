@@ -1,5 +1,5 @@
 function Y = wiener_icsi(X, SR)
-% Y = wiener)icsi(X, SR)
+% Y = wiener_icsi(X, SR)
 %      Apply wiener filter enhancement, attempting to duplicate
 %      ICSI's "nr" process.  
 %      This version is as close as possible to ICSI's
@@ -9,7 +9,7 @@ function Y = wiener_icsi(X, SR)
 do_hpf = 1;
 if do_hpf
   % Just cut out the low freq for rumble
-  f_hp = 400;
+  f_hp = 200;
   hp_alpha = 2 * pi * f_hp/SR;
   % Zero to remove DC and scale to compensate for pole gain
   b_hpf = (1 - hp_alpha/2) * [1 -1];
@@ -99,7 +99,7 @@ Y = istft(XS.*Shat./XMag, nfft, 0, nhop);
 % Y is my final answer
 
 % Plotting all at end to preserve flow
-do_plot = 1;
+do_plot = 0;
 if do_plot
   % plot
   %specgram(X, nfft, SR);
