@@ -1,5 +1,5 @@
-function [y,f,g,m] = pitchfilter(d, sr, method, do_crossfade)
-% [Y,F,G,T,M] = pitchfilter(D,SR,METHOD,CROSSFADE)
+function [y,f,g,m] = pitchfilter(d, sr, method, do_crossfade, bpf_r, doplot)
+% [Y,F,G,T,M] = pitchfilter(D,SR,METHOD,CROSSFADE,BPF,DOPLOT)
 %   Enhance a signal by filtering at the harmonics of the detected
 %   pitch.  D@SR is a waveform; run noise-robust pitch tracking
 %   (via SAcC), then resample the waveform so each frame maps the
@@ -9,19 +9,18 @@ function [y,f,g,m] = pitchfilter(d, sr, method, do_crossfade)
 %   to get back to the original pitch.
 %   CROSSFADE if set causes reconstruction to fade back to original
 %   when voicing is low.
+%   BPF if greater than zero is the radius of an BPF pole to reduce 
+%   blurring in the flat-f0 spectral channels.
+%   DOPLOT generates graphical output.
 %   F returns the resampled (flattened) signal, and G is F after
 %   filtering.  
 %   M is the map from D's timebase to F's.
 % 2014-05-01 Dan Ellis dpwe@ee.columbia.edu
 
-if nargin < 3 
-  method = 'comb';
-end
-if nargin < 4
-  do_crossfade = 0;
-end
-
-doplot = 1;
+if nargin < 3 ;   method = 'comb'; end
+if nargin < 4 ;   do_crossfade = 1; end
+if nargin < 5 ;   bpf_r = 0; end
+if nargin < 6 ;   doplot = 0; end
 
 % (1) Run SAcC pitch tracker with the noisy rats classifier, and
 % with the unvoiced state discounted, to get a near-continuous
@@ -45,17 +44,22 @@ dm = resample_map(d', sr, vmap);
 % Enhance components at the target pitch period
 
 if strcmp(method, 'comb')
-  dmf = enhance_period(dm, round(sr/target_pitch));
+  dmf = derumble(enhance_period(dm, round(sr/target_pitch)), sr);
 elseif strcmp(method, 'median')
   win_t = 15; % median filter time window, in ? 8 ms steps
   win_f = 7;  % local average window in frequency (center pt not used)
-  dmf = sgram_enhance(dm, win_t, win_f);
+  dmf = derumble(sgram_enhance(dm, win_t, win_f), sr);
 elseif strcmp(method, 'wiener')
-  dmf = wiener_icsi(dm, sr);
+  dmf = derumble(wiener_icsi(dm, sr), sr);
 elseif strcmp(method, 'pvsmooth')
-  dmf = smoothsgram(dm, sr);
+  dmf = derumble(smoothsgram(dm, sr), sr);
 else
   error(['Unrecognized method - ', method]);
+end
+
+if bpf_r > 0
+  % STFTM-dB-domain band-pass filtering to reduce blurriness
+  dmf = env_bpf(dmf, bpf_r);
 end
 
 % Resample back to original domain
