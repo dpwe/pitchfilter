@@ -5,23 +5,6 @@ function Y = wiener_icsi(X, SR)
 %      This version is as close as possible to ICSI's
 % 2014-05-15 Dan Ellis dpwe@ee.columbia.edu
 
-% rumble-removing hp filter is not in icsi's nr, but it's often useful
-do_hpf = 1;
-if do_hpf
-  % Just cut out the low freq for rumble
-  f_hp = 200;
-  hp_alpha = 2 * pi * f_hp/SR;
-  % Zero to remove DC and scale to compensate for pole gain
-  b_hpf = (1 - hp_alpha/2) * [1 -1];
-  % Pole to restore low frequencies above f_lp
-  a_hpf = [1 -(1-hp_alpha)];
-  % filter
-  X = filter(b_hpf, a_hpf, X);
-
-  %freqz(b_hpf, a_hpf);
-  %return
-end
-  
 % STFT
 targetwinsec = 0.025;
 nfft = 2^round(log(targetwinsec*SR)/log(2));
