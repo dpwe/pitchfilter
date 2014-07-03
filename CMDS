@@ -1,0 +1,1 @@
+sndcat -T MSWAVE -f s -k 0.5 -d 34 ../../corpora/BABEL_OP1_204_LLP/conversational/dev/audio/BABEL_OP1_204_73990_20130521_162632_outLine.sph -o 73990_outLine.wav
