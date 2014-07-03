@@ -70,7 +70,7 @@ du = resample_map(dmf, sr, inv_map(vmap));
 if do_crossfade
   pvx_dsfact = round(sr*median(diff(times)));
   origgain = 0.1; % crossfade to attenuated original
-  du = crossfade(du', origgain*d, pvx, pvx_dsfact);
+  du = crossfade(du', origgain*derumble(d, sr), pvx, pvx_dsfact);
 end
   
 % Return values
